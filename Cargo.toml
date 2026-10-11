@@ -1,0 +1,77 @@
+[package]
+name = "mcb-smart-boy"
+version = "0.1.0"
+edition = "2024"
+publish = false
+default-run = "mcb-smart-boy"
+
+[workspace]
+members = ["xtask"]
+default-members = [".", "xtask"]
+exclude = ["vendor/leptos_router"]
+resolver = "3"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "mcb-smart-boy"
+path = "src/main.rs"
+required-features = ["ssr"]
+
+[dependencies]
+axum = { version = "0.8", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+leptos = { version = "=0.8.21" }
+js-sys = { version = "=0.3.106", optional = true }
+leptos_axum = { version = "=0.8.10", optional = true }
+leptos_meta = { version = "=0.8.7" }
+leptos_router = { version = "=0.8.16" }
+pulldown-cmark = "0.13"
+tempfile = { version = "3", optional = true }
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"], optional = true }
+tower = { version = "0.5", features = ["util"], optional = true }
+wasm-bindgen = { version = "=0.2.129", optional = true }
+wasm-bindgen-futures = { version = "=0.4.79", optional = true }
+web-sys = { version = "0.3", features = ["Window", "Document", "HtmlDocument", "Element", "HtmlElement", "HtmlDialogElement", "HtmlButtonElement", "HtmlDivElement", "HtmlInputElement", "HtmlMetaElement", "MediaQueryList", "CssStyleDeclaration", "DomTokenList", "DomRect", "DomRectReadOnly", "ResizeObserver", "ResizeObserverEntry", "AnimationEvent", "PointerEvent", "KeyboardEvent", "MouseEvent", "Event", "EventTarget", "Location", "Navigator", "Clipboard", "ShareData", "DomException", "Node", "FocusOptions", "console"], optional = true }
+
+
+[build-dependencies]
+pulldown-cmark = "0.13"
+serde = { version = "1", features = ["derive"] }
+serde-saphyr = { version = "=1.3.0", default-features = false, features = ["deserialize"] }
+
+[dev-dependencies]
+tempfile = "3"
+pulldown-cmark = "0.13"
+serde = { version = "1", features = ["derive"] }
+serde-saphyr = { version = "=1.3.0", default-features = false, features = ["deserialize"] }
+
+[patch.crates-io]
+leptos_router = { path = "vendor/leptos_router" }
+
+[features]
+default = ["ssr"]
+ssr = ["dep:axum", "dep:tempfile", "dep:tokio", "dep:tower", "dep:leptos_axum", "leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr"]
+hydrate = ["leptos/hydrate", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys", "dep:console_error_panic_hook"]
+
+[profile.dev]
+# Full Leptos monomorphization can exceed the linker's 4 GiB debug-section limit.
+debug = 1
+
+[package.metadata.leptos]
+output-name = "mcb-smart-boy"
+site-root = "run/site"
+site-pkg-dir = "pkg"
+style-file = "assets/site.css"
+assets-dir = "public"
+site-addr = "127.0.0.1:3000"
+reload-port = 3001
+bin-features = ["ssr"]
+lib-features = ["hydrate"]
+bin-default-features = false
+lib-default-features = false
+bin-cargo-args = ["--locked"]
+lib-cargo-args = ["--locked"]
+disable-erase-components = true
+watch-additional-files = ["content/posts"]

@@ -1,12 +1,12 @@
-# Install as .github/workflows/pages.yml in MCB-SMART-BOY/mcb-smart-boy.github.io.
-# Configure that repository's Pages source as GitHub Actions before dispatching.
-name: Publish static blog
+# This repository owns both the website source and its Pages deployment.
+# Configure this repository's Pages source as GitHub Actions before dispatching.
+name: Publish personal website
 
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Full lowercase 40-character commit SHA from MCB-SMART-BOY/MCB-SMART-BOY
+        description: Full lowercase 40-character commit SHA from MCB-SMART-BOY/mcb-smart-boy.github.io
         required: true
         type: string
 
@@ -31,10 +31,9 @@ jobs:
             echo 'source_sha must be a full lowercase 40-character hexadecimal commit SHA' >&2
             exit 2
           }
-      - name: Check out the public source at the requested commit
+      - name: Check out this website at the requested commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          repository: MCB-SMART-BOY/MCB-SMART-BOY
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
       - name: Record checked-out source commit
@@ -51,15 +50,28 @@ jobs:
           mkdir -p run/provenance
           printf '%s\n' "$actual_sha" > run/provenance/source-sha.txt
           printf 'Source commit: %s\n' "$actual_sha" >> "$GITHUB_STEP_SUMMARY"
-      - name: Install locked project toolchain
-        run: ./dev.sh setup
+      - name: Prepare rolling nightly for this checkout
+        run: rustup toolchain install nightly --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
+      - name: Install and verify site build tools
+        run: cargo xtask setup
+      - name: Record actual compiler and build tool versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            rustc -vV
+            cargo --version
+            cargo-leptos --version
+            wasm-bindgen --version
+            wasm-opt --version
+          } > run/provenance/tool-versions.txt
       - name: Validate and export static pages
-        run: ./validate.sh
-      - name: Upload source commit provenance (not part of the site)
+        run: cargo xtask check
+      - name: Upload source and tool provenance (not part of the site)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: source-commit
-          path: run/provenance/source-sha.txt
+          name: source-and-tool-provenance
+          path: run/provenance/
           if-no-files-found: error
           retention-days: 30
       - name: Upload same-run Pages artifact

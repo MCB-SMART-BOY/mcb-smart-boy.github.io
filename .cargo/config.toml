@@ -1,0 +1,6 @@
+[alias]
+xtask = "run --locked --package xtask --"
+
+[env]
+# Leptos uses this compile-time variable to select cargo-leptos WASM filenames.
+LEPTOS_OUTPUT_NAME = "mcb-smart-boy"
