@@ -75,13 +75,13 @@ cargo run --locked
 
 `build` 单次生成 `run/site/`，之后普通 `cargo run --locked` 才有浏览器资源可提供；单独运行 Cargo 不构建浏览器资源。打开 `http://127.0.0.1:3000`。换端口：`BLOG_ADDR=127.0.0.1:4000 cargo run --locked`；开发时使用 `cargo xtask dev`，由 cargo-leptos 自动构建、提供服务并监听修改；watch 持续运行并不证明每次编译成功。服务默认仅监听回环地址；不要在未配置 TLS 和部署安全边界前公开暴露。停止服务使用 `Ctrl+C`。
 
-在仓库根目录直接运行标准 `cargo` / `rustup`；例如 `cargo test --locked`、`cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`rustc --version`。项目 alias `cargo xtask` 从 workspace 成员目录也可调用，xtask 命令始终从仓库根执行。Cargo 产物使用默认或用户配置的 target directory（含 `CARGO_TARGET_DIR`）；不要写死 `target/release`。不覆盖用户的 `CARGO_HOME`、`RUSTUP_HOME`、`CARGO_TARGET_DIR`、`XDG_*`、`TMPDIR` 和 `TRIVY_CACHE_DIR`；`run/` 只放站点资源、静态导出和发布记录等项目生成物。`run/` 和 `.env` 已忽略，不会提交编译产物和本地设置。普通 Cargo 配置及环境变量仍按用户设置生效。
+在仓库根目录直接运行标准 `cargo` / `rustup`；例如 `cargo test --locked`、`cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`rustc --version`。项目 alias `cargo xtask` 从 workspace 成员目录也可调用，xtask 命令始终从仓库根执行。Cargo 产物使用默认或用户配置的 target directory（含 `CARGO_TARGET_DIR`）；不要写死 `target/release`。不覆盖用户的 `CARGO_HOME`、`RUSTUP_HOME`、`CARGO_TARGET_DIR`、`XDG_*`、`TMPDIR` 和 `TRIVY_CACHE_DIR`；`run/` 只放站点资源、静态导出和发布记录等项目生成物，整个目录是可再生的：工具就绪且构建成功时，`cargo xtask build` / `export` / `check` 会重新创建所需部分（cargo-leptos 建立缺失的 site root 与 pkg，导出在 `run/` 下组装 staging 并把缺失的 `run/pages` 直接安装到位）；普通 `cargo run` 不重建，须先执行 `cargo xtask build`。因此可以随时删除 `run/` 回收空间。2026-10-11 已删除旧的 dev.sh 隔离遗留 `run/{build,cargo,rustup,trivy,cache,config,data,tmp}` 与验收下载副本，不保留跨轮次缓存。`run/` 和 `.env` 已忽略，不会提交编译产物和本地设置。普通 Cargo 配置及环境变量仍按用户设置生效。
 
 `.cargo/config.toml` 同时为普通 Cargo 构建提供 `LEPTOS_OUTPUT_NAME`。Leptos 在编译期用它选择 cargo-leptos 的 WASM 命名；删除此项曾使 `cargo run` 请求不存在的 `_bg.wasm` 并导致交互无法接管。它是应用资源命名设置，不是工具链或缓存隔离。
 
 ### 静态构建与发布
 
-准备工具链后运行 `cargo xtask export`。命令使用独立的 `run/site-release/` 构建 release SSR/WASM，构建成功才直接调用同一次 cargo-leptos 构建的原生二进制 `export`，输出完整站点到 `run/pages/`，不监听 HTTP 端口。该二进制及对应 `hash.txt` 位于 Cargo metadata 给出的 target directory 下对应 host/release 位置，不固定为旧 `run/build/release/`；失败时不得退回旧产物。开发构建继续使用 `run/site/`，两套资源不混用。不要另用不同配置重建导出二进制，否则可能破坏 hydration 标记一致性。
+准备工具链后运行 `cargo xtask export`。命令使用独立的 `run/site-release/` 构建 release SSR/WASM，构建成功才直接调用同一次 cargo-leptos 构建的原生二进制 `export`，输出完整站点到 `run/pages/`，不监听 HTTP 端口。该二进制及对应 `hash.txt` 位于 Cargo metadata 给出的 target directory 下对应 host/release 位置；历史 dev.sh 时代的 `run/build/release/` 已于 2026-10-11 删除，不是有效路径。失败时不得退回旧产物。开发构建继续使用 `run/site/`，两套资源不混用。不要另用不同配置重建导出二进制，否则可能破坏 hydration 标记一致性。
 
 导出页面、阅读树、面包屑和 Markdown 内容链接共用生成索引；不手写导出网址表。每个规范网址写成目录内 `index.html`，未知网址使用真实错误页 `404.html`，不是首页副本或 JS 跳转。`src/app.rs` 的单一 `SiteContent` 分发器使未知根路径和未知 `/writing/...` 使用相同错误页面结构；本地 SSR 通过官方 `LeptosRoutes` 注册索引网址，以保留 executor 初始化、请求和 meta 上下文。
 
@@ -91,15 +91,17 @@ CSS、JS、WASM 使用构建生成的哈希文件名，HTML 引用与最终资�
 
 `.github/workflows/pages.yml` 是本仓库唯一 Pages 发布配置，不再维护 `.omp/pages/workflow.yml` 安装副本；发布工作流只检出本网站仓库，不从个人主页仓库获取源码。本次从个人主页仓库的历史提交恢复本地网站源码，不改变这一发布归属。网站地址为 `https://mcb-smart-boy.github.io/`，Pages source 使用 GitHub Actions。变更远端设置及实际发布均需对应授权，不覆盖未识别内容。
 
-发布只接受手动提供的完整、小写 40 位源码 commit SHA，从当前网站仓库 `MCB-SMART-BOY/mcb-smart-boy.github.io` 检出并核对实际 SHA，显式准备 nightly 组件/target，执行 `cargo xtask setup` 与 `cargo xtask check`，上传同一 run 的 Pages artifact 后部署。首次使用迁移后的工作流时，输入必须是已推送且包含完整网站源码的网站仓库提交，不能输入旧个人主页仓库的 SHA。源码 SHA 和实际 `rustc -vV`、Cargo 及三种构建工具版本另存为 provenance artifact，不混入网站；滚动 nightly 不能只凭源码 SHA 断言可复现编译器和产物。默认 `contents: read`，仅 deploy job 增加 `pages: write` / `id-token: write`；Action 固定完整提交，不保存 checkout 凭据，不新增 PAT 或 push 自动发布。全局质量门仍是本地独立要求，不把项目检查冒称为所有安全检查。
+发布只接受手动提供的完整、小写 40 位源码 commit SHA，从当前网站仓库 `MCB-SMART-BOY/mcb-smart-boy.github.io` 检出并核对实际 SHA，显式准备 nightly 组件/target，执行 `cargo xtask setup` 与 `cargo xtask check`，上传同一 run 的 Pages artifact 后部署。首次使用迁移后的工作流时，输入必须是已推送且包含完整网站源码的网站仓库提交，不能输入旧个人主页仓库的 SHA。源码 SHA 和实际 `rustc -vV`、Cargo 及三种构建工具版本另存为 provenance artifact，不混入网站；该目录由 workflow 在 `run/provenance/` 下自行创建写入，`cargo xtask check` 不生成它，本地删除 `run/` 也不会丢它（它只存在于 CI 运行的工作目录与本仓库 artifact 中）。滚动 nightly 不能只凭源码 SHA 断言可复现编译器和产物。默认 `contents: read`，仅 deploy job 增加 `pages: write` / `id-token: write`；发布链上的 Action 全部固定完整提交，`upload-pages-artifact` 使用 v4.0.0（内部依赖同样固定到 `upload-artifact` v4.6.2 的完整 SHA，不再引用可变标签），不保存 checkout 凭据，不新增 PAT 或 push 自动发布。该版本起上传时排除点文件，导出清单 `.mcb-static-export` 不再进入发布 artifact。全局质量门仍是本地独立要求，不把项目检查冒称为所有安全检查。
 
 提交、推送、创建仓库、部署和回滚均需对应授权。发布失败时停止后续发布并保留诊断，不虚构回滚基线。恢复旧版前先核对旧 run 的已验收 artifact 是否仍可用；产物过期时按记录的来源仓库和 SHA 重新构建、验收后再发布。迁移前的源码 SHA 属于个人主页仓库，不能直接交给当前工作流重建；本次不保留跨仓库兼容发布路径。每次发布后必须实际验证 HTTPS、深链刷新、无尾斜线请求、真实 404、WASM MIME、资源完整性，并记录已验收的来源仓库、源码 SHA 和 workflow run；本地静态服务通过不能替代 Pages 平台验收。线上回滚未经演练时必须明确说明。
 
 2026-10-11 本次发布前核对的线上基线为 [run 37590809155](https://github.com/MCB-SMART-BOY/mcb-smart-boy.github.io/actions/runs/37590809155)，GitHub Pages deployment `6905095541` 状态为 success。其 workflow 提交是本网站仓库 `f8b608fa10c1f2d6e81d122215311def8626f234`，`source-commit` artifact 记录的实际网站源码是个人主页仓库 `867921977902e6cf4856bf17112c9fad72e186a5`，两者不可混用。旧源码仍可读取，但旧 Pages artifact 已不在可下载列表中，不能承诺直接恢复该产物。需要回滚时须重新运行这一旧 workflow run、重建并验收旧源码；不得将旧个人主页 SHA 传给新的同仓发布工作流。本轮未执行线上回滚演练。
 
+2026-10-11 迁移后的首次发布为本仓库 [run 38140946750](https://github.com/MCB-SMART-BOY/mcb-smart-boy.github.io/actions/runs/38140946750)：手动 `workflow_dispatch` 输入源码 commit `72a0c5ef8321f50375c03d9bfd7b7bd7bcc63490`，provenance 记录 `rustc 1.101.0-nightly (6f5da406b 2026-10-10)`、`cargo 1.101.0-nightly (29c5daa1a 2026-10-07)`、cargo-leptos 0.3.11、wasm-bindgen 0.2.129、wasm-opt 116；GitHub deployment 记录同源码 SHA。验收：HTTPS 首页、`/writing/` 与文章深链 200；`/writing` 返回 301 到带尾斜线形式；未知路径与旧 `/writing/books/` 返回真实 404；把同 run 的 Pages artifact 下载到本地后与线上逐文件比对，整棵树字节一致（含哈希命名的 CSS/JS/WASM、字体、图片与许可文件）。验收后本地删除 `run/` 全目录，线上产物不受影响；需要复查时在平台保留期内重新下载 artifact，或按源码 SHA 重新构建、验收。
+
 ## 验证与维护
 
-1. 先以纯静态服务提供 `run/pages/`，验证首页、全部目录和文章、深层锚点、query/hash、刷新、404、历史导航与原有交互；覆盖两种语言／主题、手机、无 JavaScript、WASM 失败／延迟及异常 cookie，再运行项目检查 `cargo xtask check`（WASM hydrate check、SSR/WASM 开发构建、workspace 锁定测试、release 静态导出及关键 HTML 文件检查）。改动发布配置时另做 actionlint 与 ShellCheck。
+1. 先运行 `cargo xtask export` 生成 `run/pages/`（目录不存在时会被创建），再以纯静态服务提供它；验证首页、全部目录和文章、深层锚点、query/hash、刷新、404、历史导航与原有交互；覆盖两种语言／主题、手机、无 JavaScript、WASM 失败／延迟及异常 cookie，再运行项目检查 `cargo xtask check`（WASM hydrate check、SSR/WASM 开发构建、workspace 锁定测试、release 静态导出及关键 HTML 文件检查）。改动发布配置时另做 actionlint 与 ShellCheck。
 2. 最后直接运行通用质量门：`"$HOME/.omp/agent/validate.sh"`；其与项目检查相互独立。适用 gate 无法通过时明确记录原因，不把跳过当作通过。
 3. 除非用户明确授权，不提交、推送、部署或改动个人主页中已核实的资料。用户明确同意的依赖/SSR 迁移取代旧 Askama 模板；不保留旧端点或重复渲染路径。
 
