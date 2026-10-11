@@ -23,7 +23,7 @@ cargo xtask dev
 
 `cargo xtask export` 单次 release 构建并用同次构建的原生二进制导出完整网站到 `run/pages/`；`cargo xtask check` 检查 WASM、SSR/WASM、workspace 测试、release 导出和关键页面文件。`run/site/` 是开发资源，`run/site-release/` 是发布构建资源，`run/pages/` 是完整静态产物；这些目录均为生成产物，不手工修改或提交；整个 `run/` 可随时删除回收空间，`cargo xtask build` / `export` / `check` 会按需重建（普通 `cargo run` 不重建，须先构建），2026-10-11 已清理旧 dev.sh 隔离缓存。
 
-`.github/workflows/pages.yml` 仅支持手动发布：输入本网站仓库中已推送的完整、小写 40 位提交 SHA，验证后部署同次构建的 Pages artifact。不要输入个人主页仓库的旧 SHA；推送不会自动发布。CI 准备 nightly、执行 `cargo xtask setup` 和 `cargo xtask check`，另存源码 SHA 与实际工具版本 provenance，不混入站点。提交、推送与发布需要分别授权。
+`.github/workflows/pages.yml` 在 `main` 收到推送时自动发布该次提交，也可手动触发并输入本网站仓库中已推送的完整、小写 40 位提交 SHA。两种入口都先核对实际检出的提交，再部署同次构建的 Pages artifact。不要输入个人主页仓库的旧 SHA。CI 准备 nightly、执行 `cargo xtask setup` 和 `cargo xtask check`，另存源码 SHA 与实际工具版本 provenance，不混入站点。提交与推送需要授权；推送 `main` 会触发发布，同一并发组中等待的运行可能被更新的推送替换。
 
 ## 维护入口
 

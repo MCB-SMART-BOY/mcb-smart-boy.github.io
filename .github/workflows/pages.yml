@@ -1,8 +1,11 @@
 # This repository owns both the website source and its Pages deployment.
 # Configure this repository's Pages source as GitHub Actions before dispatching.
+# A push to main publishes that commit; workflow_dispatch publishes an explicit commit.
 name: Publish personal website
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       source_sha:
@@ -22,29 +25,39 @@ jobs:
     if: github.repository == 'MCB-SMART-BOY/mcb-smart-boy.github.io'
     runs-on: ubuntu-latest
     steps:
-      - name: Validate source commit input
+      - name: Resolve source commit
+        id: source
         shell: bash
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SHA: ${{ inputs.source_sha }}
+          EVENT_SHA: ${{ github.sha }}
         run: |
-          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
-            echo 'source_sha must be a full lowercase 40-character hexadecimal commit SHA' >&2
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
+            sha="$INPUT_SHA"
+          else
+            sha="$EVENT_SHA"
+          fi
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo 'source commit must be a full lowercase 40-character hexadecimal SHA' >&2
             exit 2
           }
-      - name: Check out this website at the requested commit
+          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
+      - name: Check out this website at the resolved commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ steps.source.outputs.sha }}
           persist-credentials: false
       - name: Record checked-out source commit
         shell: bash
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
         run: |
           set -euo pipefail
           actual_sha=$(git rev-parse HEAD)
           [[ "$actual_sha" == "$SOURCE_SHA" ]] || {
-            echo 'Checked-out source commit differs from requested commit' >&2
+            echo 'Checked-out source commit differs from the resolved commit' >&2
             exit 1
           }
           mkdir -p run/provenance
