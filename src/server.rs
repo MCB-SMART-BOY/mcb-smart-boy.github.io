@@ -19,12 +19,16 @@ pub fn build_app(options: LeptosOptions) -> Router {
 #[cfg(test)]
 mod tests {
     use super::build_app;
-    use crate::content::{find_directory, find_post, page_paths};
+    use crate::content::{
+        ContentEntry, DIRECTORIES, Directory, POSTS, ROOT_DIRECTORY, find_directory, find_post,
+        page_paths,
+    };
     use axum::{
         body::{Body, to_bytes},
         http::{Request, StatusCode, header::COOKIE},
     };
     use leptos::prelude::get_configuration;
+    use std::{fs, path::Path};
     use tower::ServiceExt;
 
     const MAX_TEST_RESPONSE_BYTES: usize = 1024 * 1024;
@@ -350,19 +354,58 @@ mod tests {
         }
     }
 
+    /// Reading navigation lists every content page exactly once: the link back to
+    /// the landing page, the content root entry, then the tree in index order — a
+    /// directory link followed by that directory's entries, with subdirectories
+    /// recursed in place and articles as leaves. Derived from the generated index so
+    /// adding, removing or reordering content never requires editing this test.
+    fn expected_reading_navigation() -> Vec<&'static str> {
+        fn collect_entries(directory: &'static Directory, paths: &mut Vec<&'static str>) {
+            for entry in directory.entries {
+                match *entry {
+                    ContentEntry::Directory(child) => {
+                        paths.push(child.path);
+                        collect_entries(child, paths);
+                    }
+                    ContentEntry::Article(post) => paths.push(post.path),
+                }
+            }
+        }
+
+        let mut paths = vec!["/", ROOT_DIRECTORY.path];
+        collect_entries(&ROOT_DIRECTORY, &mut paths);
+        paths
+    }
+
+    /// Every Markdown file in the content tree becomes exactly one page. The derived
+    /// navigation above compares the compiled index with itself, so it cannot notice a
+    /// file that the scanner never picked up; this walk over the real files closes that
+    /// gap without listing the current pages.
+    #[test]
+    fn content_index_covers_every_markdown_file() {
+        fn count_markdown_files(directory: &Path) -> usize {
+            fs::read_dir(directory)
+                .expect("content directory is readable")
+                .map(|entry| entry.expect("content entry is readable").path())
+                .map(|path| match path.is_dir() {
+                    true => count_markdown_files(&path),
+                    false => usize::from(path.extension().is_some_and(|kind| kind == "md")),
+                })
+                .sum()
+        }
+
+        let content = Path::new(env!("CARGO_MANIFEST_DIR")).join("content/posts");
+        assert_eq!(
+            count_markdown_files(&content),
+            DIRECTORIES.len() + POSTS.len(),
+            "every Markdown file under {} must appear in the content index",
+            content.display()
+        );
+    }
+
     #[tokio::test]
     async fn reading_routes_keep_complete_tree_and_exact_current_page() {
-        let expected = [
-            "/",
-            "/writing/",
-            DEMO_DIRECTORY_PATH,
-            SYSTEMS_DIRECTORY_PATH,
-            SYSTEMS_POST_PATH,
-            "/writing/demo-notes/rust-web/",
-            "/writing/demo-notes/rust-web/rust-web-notes/",
-            "/writing/demo-notes/learning/",
-            "/writing/demo-notes/learning/notes-on-learning/",
-        ];
+        let expected = expected_reading_navigation();
         let generated = page_paths().collect::<Vec<_>>();
         assert_eq!(generated.len(), expected.len());
         assert_eq!(
@@ -370,20 +413,15 @@ mod tests {
                 .iter()
                 .copied()
                 .collect::<std::collections::HashSet<_>>(),
-            expected.into_iter().collect()
+            expected.iter().copied().collect()
         );
         for path in generated {
-            let (status, _) = request_page(path).await;
-            assert_eq!(status, StatusCode::OK, "generated route: {path}");
-        }
-        for path in [
-            "/writing/",
-            DEMO_DIRECTORY_PATH,
-            "/writing/demo-notes/rust-web/",
-            SYSTEMS_POST_PATH,
-        ] {
             let (status, body) = request_page(path).await;
-            assert_eq!(status, StatusCode::OK);
+            assert_eq!(status, StatusCode::OK, "generated route: {path}");
+            if path == "/" {
+                // The landing page renders the primary navigation, not the reading tree.
+                continue;
+            }
             let navigation = find_active_navigation(&body);
             assert_eq!(collect_link_targets(navigation), expected, "{path}");
             assert_current_link(navigation, path);

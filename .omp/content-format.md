@@ -99,7 +99,7 @@ HTTP(S) 外链可正常指向 `.md` 文件。原始 HTML 只作为文本显示�
 
 ## DO / DON'T
 
-- **DO** 新增目录时先添加 `_index.md`，新增文章时补齐其 front matter；内容维护不改 Rust 表或路由表。
+- **DO** 新增目录时先添加 `_index.md`，新增文章时补齐其 front matter；内容维护不改 Rust 表或路由表。路由与左树断言从生成索引派生，新增目录或文章不需要改动测试清单。
 - **DO** 用 `weight` 调整同级顺序，用实际文件位置调整归属。
 - **DO** 修改后运行 `cargo xtask export` 重新构建并导出到 `run/pages/`；开发时可用 `cargo xtask dev` 构建、提供服务和监听内容变化，但 watch 存活不等于编译成功，更不等于更新发布产物。导出目录受归属清单管理，不手工编辑或添加文件；一次成功替换会移除已删除或移动页面的旧产物。
 - **DON'T** 在 `_index.md`、`SUMMARY.md` 或 Rust 中再维护一份 children／articles 列表。
