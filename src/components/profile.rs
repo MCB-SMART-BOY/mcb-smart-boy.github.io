@@ -28,10 +28,17 @@ pub(crate) fn CodeFlowCard() -> impl IntoView {
                 alt=move || locale.get().select("CodeFlow·代码灵动社团 Logo", "CodeFlow·代码灵动 club logo")/>
             <div>
                 <p>{move || locale.get().select(
-                    "我创办了 CodeFlow·代码灵动社团，把对代码的热情延伸到共同学习与交流。",
-                    "I founded CodeFlow·代码灵动, extending my enthusiasm for code into shared learning and exchange.")}</p>
+                    "我创办了 CodeFlow·代码灵动社团，希望把对代码的好奇，变成一起动手、共同学习的日常。",
+                    "I founded CodeFlow·代码灵动 to turn curiosity about code into hands-on learning together.",
+                )}</p>
+                <p>{move || locale.get().select(
+                    "我希望围绕 Rust、Linux 与开源工具展开交流：从 Rust 的工具链、所有权和小工具开发，到 Linux 的命令行、开发环境与系统使用，在具体问题中理解代码与系统。",
+                    "I hope to build discussions around Rust, Linux, and open-source tools: from Rust tooling, ownership, and small utilities to the Linux command line, development environments, and everyday system use, learning through concrete problems.",
+                )}</p>
                 <p class="community-note">{move || locale.get().select(
-                    "B站上有社团相关内容。", "Related CodeFlow content is available on Bilibili.")}</p>
+                    "也欢迎带着自己的问题、学习笔记或小项目交流；比起堆砌技术名词，我更在意把问题讲清楚、把尝试记录下来。",
+                    "Questions, learning notes, and small projects are welcome. Clear explanations and documented experiments matter more to me than a list of buzzwords.",
+                )}</p>
             </div>
         </div>
     }

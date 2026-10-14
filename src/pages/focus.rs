@@ -10,7 +10,7 @@ pub(super) fn FocusSection() -> impl IntoView {
         use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::default()));
     view! {
         <section class="page-intro focus-intro" aria-labelledby="focus-title">
-            <span class="section-kicker"><span class="square" aria-hidden="true"></span>" 03 / CURRENT SIGNAL"</span>
+            <span class="section-kicker"><span class="square" aria-hidden="true"></span>" 02 / CURRENT SIGNAL"</span>
             <h2 id="focus-title">{move || locale.get().select("持续关注", "Areas of focus")}<span class="accent">"."</span></h2>
             <p>{move || locale.get().select("不是完成清单，而是持续探索的问题空间。", "Not a list of achievements, but questions to keep exploring.")}</p>
         </section>
@@ -44,9 +44,6 @@ pub(super) fn FocusSection() -> impl IntoView {
                     <h3>{move || locale.get().select("AI 与工程实践", "Applied AI & engineering")}<span>" / APPLIED AI"</span></h3>
                     <p>{move || locale.get().select("关注视觉推理、异常检测、异步服务与可复现部署。", "Working on visual inference, anomaly detection, asynchronous services, and reproducible deployment.")}</p>
                     <span class="focus-foot">"PYTORCH · FASTAPI · NIX"</span>
-                    <div class="focus-project-links">
-                        <a href="/#experience" target="_self">{move || locale.get().select("查看工程经历", "View engineering experience")}</a>
-                    </div>
                 </div>
             </div>
         </section>

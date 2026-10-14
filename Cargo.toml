@@ -33,7 +33,7 @@ tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"], option
 tower = { version = "0.5", features = ["util"], optional = true }
 wasm-bindgen = { version = "=0.2.129", optional = true }
 wasm-bindgen-futures = { version = "=0.4.79", optional = true }
-web-sys = { version = "0.3", features = ["Window", "Document", "HtmlDocument", "Element", "HtmlElement", "HtmlDialogElement", "HtmlButtonElement", "HtmlDivElement", "HtmlInputElement", "HtmlMetaElement", "MediaQueryList", "CssStyleDeclaration", "DomTokenList", "DomRect", "DomRectReadOnly", "ResizeObserver", "ResizeObserverEntry", "AnimationEvent", "PointerEvent", "KeyboardEvent", "MouseEvent", "Event", "EventTarget", "Location", "Navigator", "Clipboard", "ShareData", "DomException", "Node", "FocusOptions", "console"], optional = true }
+web-sys = { version = "0.3", features = ["Window", "Document", "HtmlDocument", "Element", "HtmlElement", "HtmlDialogElement", "HtmlButtonElement", "HtmlDivElement", "HtmlInputElement", "HtmlMetaElement", "MediaQueryList", "CssStyleDeclaration", "DomTokenList", "DomRect", "DomRectReadOnly", "ResizeObserver", "ResizeObserverEntry", "AnimationEvent", "PointerEvent", "KeyboardEvent", "MouseEvent", "Event", "EventTarget", "Location", "Navigator", "Clipboard", "ShareData", "DomException", "Node", "NodeList", "FocusOptions", "console"], optional = true }
 
 
 [build-dependencies]

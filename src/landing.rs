@@ -5,33 +5,27 @@ use crate::locale::Locale;
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum LandingSection {
     Home,
-    About,
     Focus,
     Projects,
-    Experience,
     Background,
     Community,
-    Recognition,
     Notes,
+    About,
 }
 
 impl LandingSection {
-    pub(crate) const ALL: [Self; 9] = [
+    pub(crate) const ALL: [Self; 7] = [
         Self::Home,
-        Self::About,
         Self::Focus,
         Self::Projects,
-        Self::Experience,
         Self::Background,
         Self::Community,
-        Self::Recognition,
         Self::Notes,
+        Self::About,
     ];
 
     pub(crate) fn iter_navigation() -> impl Iterator<Item = Self> {
-        Self::ALL
-            .into_iter()
-            .filter(|section| *section != Self::Recognition)
+        Self::ALL.into_iter()
     }
 
     pub(crate) fn href(self) -> &'static str {
@@ -41,9 +35,7 @@ impl LandingSection {
             Self::About => "/#about",
             Self::Background => "/#background",
             Self::Projects => "/#open-source",
-            Self::Experience => "/#experience",
             Self::Community => "/#codeflow",
-            Self::Recognition => "/#recognition",
             Self::Notes => "/#notes",
         }
     }
@@ -59,10 +51,8 @@ impl LandingSection {
             Self::About => locale.about(),
             Self::Background => locale.select("教育与技能", "Education & skills"),
             Self::Projects => locale.select("项目与开源", "Projects & open source"),
-            Self::Experience => locale.select("工程经历", "Engineering experience"),
             Self::Community => locale.select("CodeFlow 社团", "CodeFlow community"),
-            Self::Recognition => locale.select("荣誉与交流", "Awards & exchanges"),
-            Self::Notes => locale.select("示例文章", "Sample writing"),
+            Self::Notes => locale.select("最近记录", "Recent notes"),
         }
     }
 }

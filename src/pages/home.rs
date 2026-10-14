@@ -27,12 +27,12 @@ pub fn HomePage() -> impl IntoView {
             <section id=LandingSection::Home.id() class="landing-section landing-panel" tabindex="-1" aria-labelledby="hero-title">
                 <div class="landing-page landing-motion"><Hero locale/><Ticker locale/></div>
             </section>
-            <AboutSection/>
             <section id=LandingSection::Focus.id() class="landing-section landing-panel" tabindex="-1" aria-labelledby="focus-title">
                 <div class="landing-page landing-motion"><FocusSection/></div>
             </section>
             <ProfileSections/>
             <RecentPosts locale/>
+            <AboutSection/>
             <Closing locale/>
         </div>
     }
@@ -94,7 +94,7 @@ fn RecentPosts(locale: RwSignal<Locale>) -> impl IntoView {
                 <span class="section-aside">"WORDS, IDEAS & EXPERIMENTS"</span>
             </div>
             <div class="section-heading">
-                <div><h2 id="writing-title">{move || locale.get().select("最近的", "Recent ")}<span class="accent">{move || locale.get().select("记录.", "notes.")}</span></h2><p>{move || locale.get().select("这里暂时保留三篇示例文章，与真实项目介绍分开展示。", "This section currently contains three sample articles, separate from the real projects above.")}</p></div>
+                <div><h2 id="writing-title">{move || locale.get().select("最近的", "Recent ")}<span class="accent">{move || locale.get().select("记录.", "notes.")}</span></h2><p>{move || locale.get().select("按时间倒序，选取最近三篇文章。", "The three latest articles, newest first.")}</p></div>
                 <A href=ROOT_DIRECTORY.path attr:class="section-link">{move || locale.get().select("全部文章 ", "All writing ")}<span aria-hidden="true">"↗"</span></A>
             </div>
             <PostList/>

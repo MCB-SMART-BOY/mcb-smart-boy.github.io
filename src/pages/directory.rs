@@ -1,4 +1,5 @@
 use crate::{
+    components::markdown::MarkdownContent,
     content::{ContentEntry, Directory},
     locale::Locale,
 };
@@ -26,7 +27,7 @@ pub(super) fn DirectoryContent(directory: &'static Directory, is_root: bool) -> 
                 <span class="section-kicker"><span class="square" aria-hidden="true"></span>" INDEX / 001"</span>
                 <h1 lang="zh-CN">{directory.title}</h1>
                 {(!introduction.html.is_empty()).then(|| view! {
-                    <div class="directory-introduction prose" lang="zh-CN" inner_html=introduction.html.as_str()></div>
+                    <MarkdownContent class="directory-introduction prose" html=introduction.html.as_str()/>
                 })}
             </header>
             <section class="section archive-section" aria-labelledby="directory-entries-title">

@@ -1,5 +1,8 @@
 use pulldown_cmark::{CowStr, Event, Options, Parser, Tag, TagEnd, html};
 
+#[path = "markdown/code_blocks.rs"]
+mod code_blocks;
+
 #[path = "../build_support/links.rs"]
 mod links;
 
@@ -129,6 +132,7 @@ pub(crate) fn render_content_markdown(source: &str, source_file: &str) -> Render
         }
         event
     });
+    let events = code_blocks::decorate_code_blocks(events);
     let mut html = String::new();
     html::push_html(&mut html, events);
     RenderedMarkdown { html, headings }
@@ -169,6 +173,61 @@ mod tests {
         assert!(html.contains("href=\"https://example.org/README.md?raw=true\""));
         assert!(html.contains("<code>let x = 1;</code>"));
         assert!(!is_safe_destination("//example.com"));
+    }
+
+    #[test]
+    fn markdown_fenced_code_preserves_whitespace_unicode_and_html_as_text() {
+        let html = render_markdown(
+            "```rs title=\"ignored\"\n  雪 α\n\n    & <script>alert(1)</script>\n```\n",
+        )
+        .html;
+        assert!(html.contains(
+            "<code class=\"language-rs\">  雪 α\n\n    &amp; &lt;script&gt;alert(1)&lt;/script&gt;\n</code>"
+        ));
+        assert!(html.contains("<span class=\"code-language\">Rust</span>"));
+        assert!(!html.contains("<script>"));
+    }
+
+    #[test]
+    fn markdown_unmarked_and_empty_code_blocks_display_text() {
+        let html = render_markdown("```\n```\n\n```plaintext\n\n```\n\n    indented\n").html;
+        assert_eq!(
+            html.matches("<span class=\"code-language\">Text</span>")
+                .count(),
+            3
+        );
+        assert!(html.contains("<pre><code></code></pre>"));
+        assert!(html.contains("<pre><code class=\"language-plaintext\">\n</code></pre>"));
+        assert!(html.contains("<pre><code>indented\n</code></pre>"));
+    }
+
+    #[test]
+    fn markdown_code_blocks_escape_unknown_info_and_keep_nested_blocks_separate() {
+        let rendered = render_markdown(
+            "# Start\n\n> ~~~<svg/onload=\"x\"&'y> extra\n> # not a heading\n> ~~~\n\n- item\n\n  ```shell\n  echo hello\n  ```\n",
+        );
+        assert_eq!(rendered.headings.len(), 1);
+        assert_eq!(rendered.headings[0].text, "Start");
+        assert!(rendered.html.contains(
+            "<span class=\"code-language\">&lt;svg/onload=&quot;x&quot;&amp;&#39;y&gt;</span>"
+        ));
+        assert!(!rendered.html.contains("<svg"));
+        assert!(
+            rendered
+                .html
+                .contains("<span class=\"code-language\">Shell</span>")
+        );
+        assert_eq!(
+            rendered.html.matches("<div class=\"code-block\">").count(),
+            2
+        );
+        assert_eq!(rendered.html.matches("</code></pre>\n</div>").count(), 2);
+        assert!(
+            rendered
+                .html
+                .contains("<blockquote>\n<div class=\"code-block\">")
+        );
+        assert!(rendered.html.contains("</div>\n</li>"));
     }
 
     #[test]

@@ -333,9 +333,7 @@ fn select_section_icon(section: LandingSection) -> IconKind {
         LandingSection::About => IconKind::About,
         LandingSection::Background => IconKind::Education,
         LandingSection::Projects => IconKind::Code,
-        LandingSection::Experience => IconKind::Work,
         LandingSection::Community => IconKind::Community,
-        LandingSection::Recognition => IconKind::Award,
         LandingSection::Notes => IconKind::Writing,
     }
 }

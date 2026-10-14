@@ -2,13 +2,15 @@ use crate::{content::POSTS, locale::Locale};
 use leptos::prelude::*;
 use leptos_router::components::A;
 
+const RECENT_POST_LIMIT: usize = 3;
+
 #[component]
 pub(super) fn PostList() -> impl IntoView {
     let locale =
         use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::default()));
     view! {
         <ul class="post-list">
-            {POSTS.iter().map(|post| view! {
+            {POSTS.iter().take(RECENT_POST_LIMIT).map(|post| view! {
                 <li>
                     <A href=post.path attr:class="post-row">
                         <span class="post-index">{post.index}<span class="post-index-line" aria-hidden="true"></span></span>

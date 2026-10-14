@@ -2,6 +2,8 @@
 #![recursion_limit = "256"]
 
 pub mod app;
+#[cfg(feature = "hydrate")]
+mod clipboard;
 pub mod components;
 mod content;
 #[cfg(feature = "ssr")]
