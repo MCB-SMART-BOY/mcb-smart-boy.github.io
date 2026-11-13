@@ -8,6 +8,8 @@ use leptos::prelude::*;
 use leptos_meta::{Meta, Title};
 use leptos_router::components::A;
 
+use crate::components::icons::AsteriskGlyph;
+
 use super::{
     about::{AboutSection, ProfileSections},
     focus::FocusSection,
@@ -65,7 +67,7 @@ fn HeroArt() -> impl IntoView {
             <div class="art-orbit art-orbit-one"></div>
             <div class="art-orbit art-orbit-two"></div>
             <div class="art-orbit art-orbit-three"></div>
-            <div class="art-core"><span class="art-core-small">"THE PROCESS"</span><span class="art-core-word">"make"<span>" / "</span>"learn"</span><span class="art-core-cross">"✳"</span></div>
+            <div class="art-core"><span class="art-core-small">"THE PROCESS"</span><span class="art-core-word">"make"<span>" / "</span>"learn"</span><span class="art-core-cross"><AsteriskGlyph/></span></div>
             <span class="art-point art-point-a">"+"</span><span class="art-point art-point-b">"+"</span><span class="art-point art-point-c">"+"</span>
             <div class="art-bottom"><span>"LESS MAGIC."<br/>"MORE UNDERSTANDING."</span><span>"001"<br/>"— 003"</span></div>
         </div>
@@ -76,10 +78,10 @@ fn HeroArt() -> impl IntoView {
 fn Ticker(locale: RwSignal<Locale>) -> impl IntoView {
     view! {
         <div class="ticker" aria-label=move || locale.get().focus()>
-            <span>"RUST"</span><span class="ticker-symbol" aria-hidden="true">"✳"</span>
-            <span>"SYSTEMS & TOOLS"</span><span class="ticker-symbol" aria-hidden="true">"✳"</span>
-            <span>"FORMAL METHODS"</span><span class="ticker-symbol" aria-hidden="true">"✳"</span>
-            <span>"APPLIED AI"</span><span class="ticker-symbol" aria-hidden="true">"✳"</span>
+            <span>"RUST"</span><span class="ticker-symbol" aria-hidden="true"><AsteriskGlyph/></span>
+            <span>"SYSTEMS & TOOLS"</span><span class="ticker-symbol" aria-hidden="true"><AsteriskGlyph/></span>
+            <span>"FORMAL METHODS"</span><span class="ticker-symbol" aria-hidden="true"><AsteriskGlyph/></span>
+            <span>"APPLIED AI"</span><span class="ticker-symbol" aria-hidden="true"><AsteriskGlyph/></span>
         </div>
     }
 }

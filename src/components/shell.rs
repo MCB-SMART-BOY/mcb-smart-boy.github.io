@@ -10,7 +10,7 @@ use leptos_router::hooks::use_location;
 use super::{
     article_outline::provide_article_outline_context,
     current_directory::{CurrentDirectory, has_article_directory},
-    icons::{Icon, IconKind},
+    icons::{AsteriskGlyph, Icon, IconKind},
     reading_navigation::ReadingNavigation,
     sidebar::{Sidebar, SidebarBrand, SidebarNavigation},
     topbar::Topbar,
@@ -332,7 +332,7 @@ pub fn SiteShell(children: Children) -> impl IntoView {
                     <CurrentDirectory/>
                 </div>
                 <footer class="site-footer">
-                    <div class="footer-top"><span class="footer-glyph" aria-hidden="true">"✳"</span><span>"KEEP BUILDING"<br/>"KEEP QUESTIONING."</span></div>
+                    <div class="footer-top"><span class="footer-glyph" aria-hidden="true"><AsteriskGlyph/></span><span>"KEEP BUILDING"<br/>"KEEP QUESTIONING."</span></div>
                     <div class="footer-bottom"><span>"© 2026 MCB-SMART-BOY "<span class="footer-separator">"/"</span>" BUILT WITH RUST"</span><span>
                         <a href=LandingSection::Home.href() target="_self">{move || LandingSection::Home.label(locale.get())}</a>
                         <a href=LandingSection::Focus.href() target="_self">{move || LandingSection::Focus.label(locale.get())}</a>

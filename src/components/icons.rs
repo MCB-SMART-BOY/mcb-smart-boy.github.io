@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 #[derive(Clone, Copy)]
-pub(super) enum IconKind {
+pub(crate) enum IconKind {
     Home,
     Writing,
     Focus,
@@ -23,7 +23,7 @@ pub(super) enum IconKind {
 }
 
 #[component]
-pub(super) fn Icon(kind: IconKind) -> impl IntoView {
+pub(crate) fn Icon(kind: IconKind) -> impl IntoView {
     let paths = match kind {
         IconKind::Home => view! { <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/> }.into_any(),
         IconKind::Writing => view! { <><path d="M4 5h16v15H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></> }.into_any(),
@@ -52,6 +52,29 @@ pub(super) fn Icon(kind: IconKind) -> impl IntoView {
     view! {
         <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             {paths}
+        </svg>
+    }
+}
+
+/// Decorative eight-spoke asterisk used in the hero art, ticker, focus cards
+/// and footer. Drawn as inline SVG so it never falls back to a system emoji
+/// font (U+2733 renders as a colour emoji on Linux). Sized with 1em so the
+/// existing font-size rules keep controlling it.
+#[component]
+pub(crate) fn AsteriskGlyph() -> impl IntoView {
+    view! {
+        <svg
+            aria-hidden="true"
+            focusable="false"
+            width="1em"
+            height="1em"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+        >
+            <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93 4.93 19.07"/>
         </svg>
     }
 }

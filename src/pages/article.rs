@@ -1,5 +1,7 @@
 use crate::{
-    components::{article_outline::ArticleOutline, markdown::MarkdownContent},
+    components::{
+        article_outline::ArticleOutline, icons::AsteriskGlyph, markdown::MarkdownContent,
+    },
     content::Post,
     locale::Locale,
 };
@@ -38,7 +40,7 @@ pub(super) fn ArticlePage(post: &'static Post) -> impl IntoView {
             <ArticleOutline headings=rendered.headings.as_slice()/>
             <MarkdownContent class="article-body prose" html=rendered.html.as_str()/>
             <footer class="article-footer">
-                <span>"END OF NOTE "<span aria-hidden="true">"✳"</span></span>
+                <span>"END OF NOTE "<span aria-hidden="true"><AsteriskGlyph/></span></span>
                 <A href=post.parent_path>{move || locale.get().select("继续阅读 ", "Keep reading ")}<span aria-hidden="true">"↗"</span></A>
             </footer>
         </article>

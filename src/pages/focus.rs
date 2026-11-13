@@ -4,6 +4,8 @@ use crate::{
 };
 use leptos::prelude::*;
 
+use crate::components::icons::AsteriskGlyph;
+
 #[component]
 pub(super) fn FocusSection() -> impl IntoView {
     let locale =
@@ -30,7 +32,7 @@ pub(super) fn FocusSection() -> impl IntoView {
                     </div>
                 </div>
                 <div class="focus-card">
-                    <span class="focus-number">"[ 02 ]"</span><span class="focus-symbol" aria-hidden="true">"✳"</span>
+                    <span class="focus-number">"[ 02 ]"</span><span class="focus-symbol" aria-hidden="true"><AsteriskGlyph/></span>
                     <h3>{move || locale.get().select("形式化验证", "Formal verification")}<span>" / FORMAL VERIFICATION"</span></h3>
                     <p>{move || locale.get().select("围绕 Lean 4、Isabelle 与证明内核，探索推理流程和信任边界。", "Exploring reasoning workflows and trust boundaries with Lean 4, Isabelle, and proof kernels.")}</p>
                     <span class="focus-foot">"LEAN 4 · ISABELLE · LCF"</span>

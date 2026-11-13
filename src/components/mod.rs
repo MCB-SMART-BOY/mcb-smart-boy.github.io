@@ -3,7 +3,7 @@ mod breadcrumbs;
 pub(crate) mod current_directory;
 #[cfg(feature = "hydrate")]
 mod directory_focus;
-mod icons;
+pub(crate) mod icons;
 pub(crate) mod markdown;
 pub(crate) mod profile;
 mod reading_directory;
