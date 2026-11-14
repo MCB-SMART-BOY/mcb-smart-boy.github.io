@@ -112,10 +112,10 @@ uv run python -m http.server 4173 --bind 127.0.0.1 --directory run/pages
 
 ```sh
 cargo xtask check
-"$HOME/.omp/agent/validate.sh"
+"$AGENT_VALIDATOR"
 ```
 
-后者是本机 OMP Harness 提供的验证器，不随网站仓库分发，不是普通读者运行网站的前置条件。缺少它时项目检查仍可运行，但协作交付要明确通用质量门尚未完成，不能以 `--quick` 代替。
+后者是由当前 Agent 环境提供的可选独立验证器，通过 `AGENT_VALIDATOR` 环境变量指定；它不随网站仓库分发，也不是普通读者运行网站的前置条件。没有配置该环境变量时跳过此项并如实报告，不能用简化模式冒充通过。项目本身的标准验证始终是 `cargo xtask check`。
 
 `cargo xtask check` 的实际顺序由 `xtask/src/main.rs::check` 定义：
 

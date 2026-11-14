@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 format!("failed to bind blog at {address}: {source}"),
             )
         })?;
-    println!("Blog demo listening on http://{address}");
+    println!("MCB site listening on http://{address}");
     axum::serve(listener, build_app(options))
         .await
         .map_err(|source| {

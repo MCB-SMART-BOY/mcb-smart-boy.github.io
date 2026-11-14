@@ -24,8 +24,16 @@ impl LandingSection {
         Self::About,
     ];
 
-    pub(crate) fn iter_navigation() -> impl Iterator<Item = Self> {
-        Self::ALL.into_iter()
+    pub(crate) fn id(self) -> &'static str {
+        match self {
+            Self::Home => "home",
+            Self::Focus => "focus",
+            Self::Projects => "open-source",
+            Self::Background => "background",
+            Self::Community => "codeflow",
+            Self::Notes => "notes",
+            Self::About => "about",
+        }
     }
 
     pub(crate) fn href(self) -> &'static str {
@@ -38,10 +46,6 @@ impl LandingSection {
             Self::Community => "/#codeflow",
             Self::Notes => "/#notes",
         }
-    }
-
-    pub(crate) fn id(self) -> &'static str {
-        self.href().trim_start_matches("/#")
     }
 
     pub(crate) fn label(self, locale: Locale) -> &'static str {

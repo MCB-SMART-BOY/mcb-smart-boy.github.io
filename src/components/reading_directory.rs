@@ -7,7 +7,7 @@ use crate::{
     reading::{ReadingRoute, resolve_reading_route},
 };
 
-use super::reading_navigation::is_unmodified_click;
+use super::navigation_behavior::is_unmodified_click;
 
 fn is_directory_ancestor(path: &str, directory: &Directory) -> bool {
     let mut parent_path = match resolve_reading_route(path) {

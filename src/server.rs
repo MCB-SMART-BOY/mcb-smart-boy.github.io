@@ -20,8 +20,7 @@ pub fn build_app(options: LeptosOptions) -> Router {
 mod tests {
     use super::build_app;
     use crate::content::{
-        ContentEntry, DIRECTORIES, Directory, POSTS, ROOT_DIRECTORY, find_directory, find_post,
-        page_paths,
+        ContentEntry, DIRECTORIES, Directory, POSTS, ROOT_DIRECTORY, find_directory, page_paths,
     };
     use axum::{
         body::{Body, to_bytes},
@@ -32,14 +31,51 @@ mod tests {
     use tower::ServiceExt;
 
     const MAX_TEST_RESPONSE_BYTES: usize = 1024 * 1024;
-    const DEMO_DIRECTORY_PATH: &str = "/writing/demo-notes/";
-    const SYSTEMS_DIRECTORY_PATH: &str = "/writing/demo-notes/systems/";
-    const SYSTEMS_POST_PATH: &str = "/writing/demo-notes/systems/small-systems/";
-    const ARTICLE_PATHS: [&str; 3] = [
-        SYSTEMS_POST_PATH,
-        "/writing/demo-notes/rust-web/rust-web-notes/",
-        "/writing/demo-notes/learning/notes-on-learning/",
-    ];
+
+    fn directory_paths() -> impl Iterator<Item = &'static str> {
+        DIRECTORIES.iter().map(|directory| directory.path)
+    }
+
+    fn article_paths() -> impl Iterator<Item = &'static str> {
+        POSTS.iter().map(|post| post.path)
+    }
+
+    fn first_directory() -> &'static Directory {
+        DIRECTORIES
+            .iter()
+            .find(|directory| !directory.entries.is_empty())
+            .expect("fixture content has a non-empty directory")
+    }
+
+    fn first_article() -> &'static crate::content::Post {
+        POSTS.first().expect("fixture content has an article")
+    }
+
+    fn directory_children(path: &str) -> Vec<&'static str> {
+        let directory = find_directory(path).expect("fixture directory exists");
+        directory
+            .entries
+            .iter()
+            .map(|entry| match entry {
+                ContentEntry::Directory(child) => child.path,
+                ContentEntry::Article(article) => article.path,
+            })
+            .collect()
+    }
+
+    fn directory_listing_targets(path: &str) -> Vec<&'static str> {
+        let directory = find_directory(path).expect("fixture directory exists");
+        let mut targets = vec![directory.parent_path.unwrap_or("/")];
+        targets.extend(directory_children(path));
+        targets
+    }
+
+    fn article_with_parent_directory() -> &'static crate::content::Post {
+        POSTS
+            .iter()
+            .find(|post| post.parent_path != ROOT_DIRECTORY.path)
+            .expect("fixture content has an article in a nested directory")
+    }
 
     async fn request_page_with_cookie(path: &str, cookie: Option<&str>) -> (StatusCode, String) {
         let options = get_configuration(Some("Cargo.toml"))
@@ -146,13 +182,28 @@ mod tests {
 
     #[tokio::test]
     async fn archive_lists_only_direct_content_children() {
-        let (status, body) = request_page("/writing/").await;
+        let (status, body) = request_page(ROOT_DIRECTORY.path).await;
         assert_eq!(status, StatusCode::OK);
         let targets = collect_link_targets(main_markup(&body));
-        assert!(targets.contains(&DEMO_DIRECTORY_PATH));
-        assert!(!targets.contains(&SYSTEMS_DIRECTORY_PATH));
-        for path in ARTICLE_PATHS {
-            assert!(!targets.contains(&path));
+        let root_children = directory_listing_targets(ROOT_DIRECTORY.path);
+        assert_eq!(
+            targets
+                .iter()
+                .copied()
+                .collect::<std::collections::HashSet<_>>(),
+            root_children.iter().copied().collect()
+        );
+        for directory in directory_paths().filter(|path| !root_children.contains(path)) {
+            assert!(
+                !targets.contains(&directory),
+                "nested directory leaked into archive: {directory}"
+            );
+        }
+        for article in article_paths() {
+            assert!(
+                !targets.contains(&article),
+                "article leaked into archive: {article}"
+            );
         }
         assert_eq!(
             breadcrumb_markup(&body)
@@ -164,80 +215,119 @@ mod tests {
 
     #[tokio::test]
     async fn directory_lists_direct_children_and_own_introduction() {
-        let (status, body) = request_page(DEMO_DIRECTORY_PATH).await;
+        let directory_path = first_directory().path;
+        let (status, body) = request_page(directory_path).await;
         assert_eq!(status, StatusCode::OK);
         let main = main_markup(&body);
-        let directory = find_directory(DEMO_DIRECTORY_PATH).expect("fixture directory");
+        let directory = find_directory(directory_path).expect("fixture directory");
         assert!(main.contains(directory.render().html.as_str()));
         let targets = collect_link_targets(main);
-        for name in ["systems", "rust-web", "learning"] {
-            let path = format!("{DEMO_DIRECTORY_PATH}{name}/");
-            assert!(targets.contains(&path.as_str()));
-        }
-        for path in ARTICLE_PATHS {
-            assert!(!targets.contains(&path));
+        assert_eq!(
+            targets
+                .iter()
+                .copied()
+                .collect::<std::collections::HashSet<_>>(),
+            directory_listing_targets(directory_path)
+                .into_iter()
+                .collect()
+        );
+        for path in
+            article_paths().filter(|path| !directory_children(directory_path).contains(path))
+        {
+            assert!(
+                !targets.contains(&path),
+                "non-child article leaked into directory: {path}"
+            );
         }
         let crumbs = breadcrumb_markup(&body);
-        assert!(collect_link_targets(crumbs).contains(&"/writing/"));
+        let ancestors = collect_link_targets(crumbs);
+        if let Some(parent) = directory.parent_path {
+            assert!(ancestors.contains(&parent));
+        }
         assert_eq!(crumbs.matches("aria-current=\"page\"").count(), 1);
     }
 
     #[tokio::test]
     async fn directory_with_articles_links_only_local_posts_and_real_parent() {
-        for (name, own_post) in ["systems", "rust-web", "learning"]
-            .into_iter()
-            .zip(ARTICLE_PATHS)
-        {
-            let (status, body) = request_page(&format!("{DEMO_DIRECTORY_PATH}{name}/")).await;
-            assert_eq!(status, StatusCode::OK);
+        for directory in DIRECTORIES.iter().filter(|directory| {
+            directory
+                .entries
+                .iter()
+                .any(|entry| matches!(entry, ContentEntry::Article(_)))
+        }) {
+            let (status, body) = request_page(directory.path).await;
+            assert_eq!(status, StatusCode::OK, "directory: {}", directory.path);
             let main = main_markup(&body);
             let targets = collect_link_targets(main);
-            assert!(targets.contains(&own_post));
-            for path in ARTICLE_PATHS.into_iter().filter(|path| *path != own_post) {
-                assert!(!targets.contains(&path));
+            let expected = directory_listing_targets(directory.path);
+            assert_eq!(targets, expected, "directory entries: {}", directory.path);
+            for article in article_paths().filter(|path| !expected.contains(path)) {
+                assert!(
+                    !targets.contains(&article),
+                    "non-child article leaked into {}: {article}",
+                    directory.path
+                );
             }
-            assert!(main.contains(find_post(own_post).expect("fixture article").summary));
+            for entry in directory.entries {
+                if let ContentEntry::Article(post) = entry {
+                    assert!(
+                        main.contains(post.summary),
+                        "summary missing in {}",
+                        directory.path
+                    );
+                }
+            }
             let crumbs = breadcrumb_markup(&body);
             let ancestors = collect_link_targets(crumbs);
-            assert!(ancestors.contains(&"/writing/"));
-            assert!(ancestors.contains(&DEMO_DIRECTORY_PATH));
+            if let Some(parent) = directory.parent_path {
+                assert!(
+                    ancestors.contains(&parent),
+                    "missing parent {parent} for {}",
+                    directory.path
+                );
+            }
             assert_eq!(crumbs.matches("aria-current=\"page\"").count(), 1);
         }
     }
 
     #[tokio::test]
     async fn article_breadcrumbs_and_return_link_follow_actual_directories() {
-        let (status, body) = request_page(SYSTEMS_POST_PATH).await;
+        let post = article_with_parent_directory();
+        let (status, body) = request_page(post.path).await;
         assert_eq!(status, StatusCode::OK);
         let crumbs = breadcrumb_markup(&body);
         let ancestors = collect_link_targets(crumbs);
-        for ancestor in ["/writing/", DEMO_DIRECTORY_PATH, SYSTEMS_DIRECTORY_PATH] {
-            assert!(ancestors.contains(&ancestor));
-        }
+        assert!(ancestors.contains(&ROOT_DIRECTORY.path));
+        assert!(ancestors.contains(&post.parent_path));
         assert_eq!(crumbs.matches("aria-current=\"page\"").count(), 1);
-        assert!(collect_link_targets(main_markup(&body)).contains(&SYSTEMS_DIRECTORY_PATH));
+        assert!(collect_link_targets(main_markup(&body)).contains(&post.parent_path));
     }
 
     #[tokio::test]
     async fn nonexistent_content_paths_return_not_found() {
+        let directory = first_directory();
+        let post = first_article();
         for path in [
-            "/writing/no-such-directory/",
-            "/writing/demo-notes/no-such-directory/",
-            "/writing/demo-notes/systems/no-such-article/",
+            "/writing/no-such-directory/".to_owned(),
+            format!("{}{}/", directory.path, "no-such-directory"),
+            format!("{}{}/", post.parent_path, "no-such-article"),
         ] {
-            let (status, _) = request_page(path).await;
+            let (status, _) = request_page(&path).await;
             assert_eq!(status, StatusCode::NOT_FOUND, "unexpected route: {path}");
         }
     }
 
     #[tokio::test]
     async fn no_slash_content_paths_return_not_found_instead_of_aliasing() {
-        for path in [
-            "/writing",
-            "/writing/demo-notes",
-            "/writing/demo-notes/systems/small-systems",
-        ] {
-            let (status, body) = request_page(path).await;
+        let paths = std::iter::once("/writing".to_owned())
+            .chain(
+                directory_paths()
+                    .filter(|path| *path != ROOT_DIRECTORY.path)
+                    .map(|path| path.trim_end_matches('/').to_owned()),
+            )
+            .chain(article_paths().map(|path| path.trim_end_matches('/').to_owned()));
+        for path in paths {
+            let (status, body) = request_page(&path).await;
             assert_eq!(status, StatusCode::NOT_FOUND, "unexpected route: {path}");
             assert!(
                 main_markup(&body).contains("404"),
@@ -268,33 +358,31 @@ mod tests {
 
     #[tokio::test]
     async fn nested_writing_paths_do_not_resolve_by_prefix() {
-        for path in [
-            "/writing/demo-notes/extra/",
-            "/writing/demo-notes/systems/extra/",
-            "/writing/demo-notes/systems/small-systems/extra/",
-            "/writing/demo-notes/systems/small-systems.md/",
-        ] {
-            let (status, _) = request_page(path).await;
+        for path in article_paths()
+            .flat_map(|article| [format!("{article}extra/"), format!("{article}md/")])
+            .chain(directory_paths().map(|directory| format!("{directory}extra/")))
+        {
+            let (status, _) = request_page(&path).await;
             assert_eq!(status, StatusCode::NOT_FOUND, "unexpected route: {path}");
         }
     }
 
     #[tokio::test]
     async fn article_english_cookie_preserves_original_and_ui_preferences() {
+        let post = first_article();
         let (status, body) =
-            request_page_with_cookie(SYSTEMS_POST_PATH, Some("mcb-lang=en; mcb-ui=dark:1:320"))
-                .await;
+            request_page_with_cookie(post.path, Some("mcb-lang=en; mcb-ui=dark:1:320")).await;
         assert_eq!(status, StatusCode::OK);
         assert!(body.contains("lang=\"en\""));
         assert!(body.contains("data-theme=\"dark\""));
         assert!(main_markup(&body).contains("Chinese original"));
-        assert!(main_markup(&body).contains("把系统做小，是一种工程能力"));
+        assert!(main_markup(&body).contains(post.title));
     }
 
     #[tokio::test]
     async fn article_invalid_language_cookie_uses_chinese() {
-        let (status, body) =
-            request_page_with_cookie(SYSTEMS_POST_PATH, Some("mcb-lang=english")).await;
+        let post = first_article();
+        let (status, body) = request_page_with_cookie(post.path, Some("mcb-lang=english")).await;
         assert_eq!(status, StatusCode::OK);
         assert!(body.contains("lang=\"zh-CN\""));
         assert!(main_markup(&body).contains("中文原文"));
@@ -302,20 +390,37 @@ mod tests {
 
     #[tokio::test]
     async fn article_content_path_returns_readable_html_without_front_matter() {
-        let (status, body) = request_page(SYSTEMS_POST_PATH).await;
+        let post = first_article();
+        let (status, body) = request_page(post.path).await;
         assert_eq!(status, StatusCode::OK);
-        assert!(main_markup(&body).contains("把系统做小，是一种工程能力"));
-        assert!(main_markup(&body).contains("一个小系统"));
+        assert!(main_markup(&body).contains(post.title));
+        assert!(main_markup(&body).contains(post.summary));
         assert!(!main_markup(&body).contains("reading_minutes:"));
     }
 
     #[tokio::test]
     async fn article_html_links_outline_entries_to_real_heading_ids() {
-        let (status, body) = request_page(SYSTEMS_POST_PATH).await;
-
+        let post = POSTS
+            .iter()
+            .find(|post| !post.render().headings.is_empty())
+            .expect("fixture content has a heading in at least one article");
+        let (status, body) = request_page(post.path).await;
         assert_eq!(status, StatusCode::OK);
-        assert!(main_markup(&body).contains("<h2 id=\"section-1\">先写出要交付的行为</h2>"));
-        assert!(main_markup(&body).contains("href=\"#section-1\""));
+        let main = main_markup(&body);
+        for heading in &post.render().headings {
+            assert!(
+                main.contains(&format!("id=\"{}\"", heading.id)),
+                "missing rendered heading {} in {}",
+                heading.id,
+                post.path
+            );
+            assert!(
+                main.contains(&format!("href=\"#{}\"", heading.id)),
+                "outline does not link to {} in {}",
+                heading.id,
+                post.path
+            );
+        }
     }
 
     #[tokio::test]
@@ -430,73 +535,84 @@ mod tests {
 
     #[tokio::test]
     async fn reading_disclosures_have_unique_targets_and_visible_ssr_children() {
-        let (_, body) = request_page(SYSTEMS_POST_PATH).await;
-        let ids = collect_attribute_values(&body, "id");
-        let unique = ids
-            .iter()
-            .copied()
-            .collect::<std::collections::HashSet<_>>();
-        assert_eq!(unique.len(), ids.len(), "duplicate element IDs");
-        let scopes = [
-            find_element_markup(&body, "id=\"site-sidebar\"", "aside"),
-            find_element_markup(&body, "class=\"mobile-drawer\"", "dialog"),
-        ];
-        for scope in scopes {
-            let tree = find_element_markup(scope, "class=\"reading-tree sidebar-nav\"", "nav");
-            for target in collect_attribute_values(tree, "aria-controls") {
-                assert!(
-                    unique.contains(target),
-                    "missing disclosure target: {target}"
-                );
-                let link = find_element_markup(tree, &format!("aria-controls=\"{target}\""), "a");
-                assert!(
-                    link.contains("aria-expanded=\"true\""),
-                    "SSR disclosure state is false"
-                );
-                let targets = collect_link_targets(link);
-                assert_eq!(targets.len(), 1);
-                assert!(
-                    find_directory(targets[0]).is_some(),
-                    "branch does not open a directory"
-                );
-                let subtree = find_element_markup(tree, &format!("id=\"{target}\""), "ul");
-                let opening = subtree.split_once('>').expect("subtree opening tag").0;
-                assert!(!opening.contains(" hidden"), "SSR hides links in {target}");
+        for path in article_paths() {
+            let (_, body) = request_page(path).await;
+            let ids = collect_attribute_values(&body, "id");
+            let unique = ids
+                .iter()
+                .copied()
+                .collect::<std::collections::HashSet<_>>();
+            assert_eq!(unique.len(), ids.len(), "duplicate element IDs at {path}");
+            let scopes = [
+                find_element_markup(&body, "id=\"site-sidebar\"", "aside"),
+                find_element_markup(&body, "class=\"mobile-drawer\"", "dialog"),
+            ];
+            for scope in scopes {
+                let tree = find_element_markup(scope, "class=\"reading-tree sidebar-nav\"", "nav");
+                for target in collect_attribute_values(tree, "aria-controls") {
+                    assert!(
+                        unique.contains(target),
+                        "missing disclosure target {target} at {path}"
+                    );
+                    let link =
+                        find_element_markup(tree, &format!("aria-controls=\"{target}\""), "a");
+                    assert!(
+                        link.contains("aria-expanded=\"true\""),
+                        "SSR disclosure state is false at {path}"
+                    );
+                    let targets = collect_link_targets(link);
+                    assert_eq!(targets.len(), 1);
+                    assert!(
+                        find_directory(targets[0]).is_some(),
+                        "branch does not open a directory"
+                    );
+                    let subtree = find_element_markup(tree, &format!("id=\"{target}\""), "ul");
+                    let opening = subtree.split_once('>').expect("subtree opening tag").0;
+                    assert!(!opening.contains(" hidden"), "SSR hides links in {target}");
+                }
             }
         }
     }
 
     #[tokio::test]
     async fn article_directory_links_only_to_real_page_headings() {
-        let (_, body) = request_page(SYSTEMS_POST_PATH).await;
-        let expected = find_post(SYSTEMS_POST_PATH)
-            .expect("fixture article")
-            .render()
-            .headings
+        for post in POSTS
             .iter()
-            .map(|heading| format!("{SYSTEMS_POST_PATH}#{}", heading.id))
-            .collect::<Vec<_>>();
-        assert_eq!(
-            collect_link_targets(find_current_directory(&body)),
-            expected
-        );
+            .filter(|post| !post.render().headings.is_empty())
+        {
+            let (_, body) = request_page(post.path).await;
+            let expected = post
+                .render()
+                .headings
+                .iter()
+                .map(|heading| format!("{}#{}", post.path, heading.id))
+                .collect::<Vec<_>>();
+            assert_eq!(
+                collect_link_targets(find_current_directory(&body)),
+                expected,
+                "outline at {}",
+                post.path
+            );
+        }
     }
 
     #[tokio::test]
     async fn non_article_and_invalid_routes_omit_page_directory() {
-        for path in [
-            "/",
-            "/focus",
-            "/about",
-            "/writing/",
-            DEMO_DIRECTORY_PATH,
-            SYSTEMS_DIRECTORY_PATH,
-            "/missing",
-            "/writing/no-such-article/",
-            "/writing/no-such-directory/",
-            "/writing/demo-notes/no-such-directory/",
-        ] {
-            let (_, body) = request_page(path).await;
+        let paths = std::iter::once("/".to_owned())
+            .chain(std::iter::once("/focus".to_owned()))
+            .chain(std::iter::once("/about".to_owned()))
+            .chain(directory_paths().map(str::to_owned))
+            .chain(
+                [
+                    "/missing",
+                    "/writing/no-such-article/",
+                    "/writing/no-such-directory/",
+                ]
+                .into_iter()
+                .map(str::to_owned),
+            );
+        for path in paths {
+            let (_, body) = request_page(&path).await;
             assert!(
                 !body.contains("class=\"current-directory\""),
                 "unexpected directory at {path}"

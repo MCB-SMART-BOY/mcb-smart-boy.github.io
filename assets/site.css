@@ -1,11 +1,11 @@
-@font-face { font-family: "MCB Maple NF"; src: url("/fonts/maple/MapleMono-NF-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; unicode-range: U+0000-02FF, U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD; }
-@font-face { font-family: "MCB Maple NF"; src: url("/fonts/maple/MapleMono-NF-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; unicode-range: U+0000-02FF, U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD; }
-@font-face { font-family: "MCB JetBrains NF Mono"; src: url("/fonts/jetbrains/JetBrainsMonoNerdFontMono-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; unicode-range: U+0000-02FF, U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD; }
-@font-face { font-family: "MCB JetBrains NF Mono"; src: url("/fonts/jetbrains/JetBrainsMonoNerdFontMono-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; unicode-range: U+0000-02FF, U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD; }
-@font-face { font-family: "MCB Source Han Sans"; src: url("/fonts/source-han-sans/SourceHanSansSC-Regular.otf") format("opentype"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "MCB Source Han Sans"; src: url("/fonts/source-han-sans/SourceHanSansSC-Bold.otf") format("opentype"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "MCB Source Han Serif"; src: url("/fonts/source-han-serif/SourceHanSerifSC-Regular.otf") format("opentype"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "MCB Source Han Serif"; src: url("/fonts/source-han-serif/SourceHanSerifSC-Bold.otf") format("opentype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "MCB Maple NF"; src: url("/fonts/maple/MapleMono-NF-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; unicode-range: U+0000-02FF, U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD; }
+@font-face { font-family: "MCB Maple NF"; src: url("/fonts/maple/MapleMono-NF-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; unicode-range: U+0000-02FF, U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD; }
+@font-face { font-family: "MCB JetBrains NF Mono"; src: url("/fonts/jetbrains/JetBrainsMonoNerdFontMono-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; unicode-range: U+0000-02FF, U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD; }
+@font-face { font-family: "MCB JetBrains NF Mono"; src: url("/fonts/jetbrains/JetBrainsMonoNerdFontMono-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; unicode-range: U+0000-02FF, U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD; }
+@font-face { font-family: "MCB Source Han Sans"; src: url("/fonts/source-han-sans/SourceHanSansSC-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "MCB Source Han Sans"; src: url("/fonts/source-han-sans/SourceHanSansSC-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "MCB Source Han Serif"; src: url("/fonts/source-han-serif/SourceHanSerifSC-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "MCB Source Han Serif"; src: url("/fonts/source-han-serif/SourceHanSerifSC-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
 :root {
   color-scheme: light;

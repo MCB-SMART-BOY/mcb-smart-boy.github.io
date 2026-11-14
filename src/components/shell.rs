@@ -7,6 +7,11 @@ use crate::{
 };
 use leptos_router::hooks::use_location;
 
+#[cfg(feature = "hydrate")]
+use super::navigation_behavior::{
+    focus_element_for_shell, focus_landing_section, focus_main_after_sidebar_navigation,
+    is_main_navigation_link, landing_section_from_href,
+};
 use super::{
     article_outline::provide_article_outline_context,
     current_directory::{CurrentDirectory, has_article_directory},
@@ -16,164 +21,15 @@ use super::{
     topbar::Topbar,
 };
 
+#[cfg(test)]
+use super::browser_preferences::parse_browser_preferences;
 #[cfg(feature = "hydrate")]
-use super::reading_navigation::is_unmodified_click;
-#[cfg(feature = "hydrate")]
-use crate::preferences::read_browser_cookies;
-#[cfg(any(feature = "hydrate", test))]
-use crate::{
-    locale::parse_locale,
-    preferences::{find_cookie_value, parse_preferences},
+use super::browser_preferences::{
+    mark_document_hydrated, restore_browser_preferences, sync_document_locale,
+    sync_document_preferences,
 };
 #[cfg(feature = "hydrate")]
 use wasm_bindgen::JsCast;
-
-#[cfg(feature = "hydrate")]
-fn focus_element(element: Option<web_sys::HtmlElement>) {
-    if let Some(element) = element {
-        let options = web_sys::FocusOptions::new();
-        options.set_prevent_scroll(true);
-        if let Err(source) = element.focus_with_options(&options) {
-            web_sys::console::error_2(
-                &"Failed to focus sidebar navigation destination".into(),
-                &source,
-            );
-        }
-    }
-}
-#[cfg(feature = "hydrate")]
-fn focus_landing_section(section: LandingSection) {
-    let target = web_sys::window()
-        .and_then(|window| window.document())
-        .and_then(|document| document.get_element_by_id(section.id()))
-        .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
-    focus_element(target);
-}
-
-#[cfg(feature = "hydrate")]
-fn landing_section_from_href(href: &str) -> Option<LandingSection> {
-    LandingSection::ALL
-        .into_iter()
-        .find(|section| section.href() == href)
-}
-
-#[cfg(feature = "hydrate")]
-fn focus_main_after_sidebar_navigation() {
-    let Some(document) = web_sys::window().and_then(|window| window.document()) else {
-        return;
-    };
-    let has_navigation_focus = document
-        .active_element()
-        .is_some_and(|element| is_main_navigation_link(&element));
-    if !has_navigation_focus {
-        return;
-    }
-    let main = document
-        .get_element_by_id("main")
-        .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
-    focus_element(main);
-}
-
-#[cfg(feature = "hydrate")]
-fn is_main_navigation_link(element: &web_sys::Element) -> bool {
-    const SELECTOR: &str =
-        ".site-sidebar a[href]:not([data-sidebar-level]):not([data-reading-branch])";
-    let link = match element.closest(SELECTOR) {
-        Ok(Some(link)) => link,
-        Ok(None) => return false,
-        Err(source) => {
-            web_sys::console::error_2(&"Failed to find content navigation link".into(), &source);
-            return false;
-        }
-    };
-    link.get_attribute("href")
-        .is_some_and(|href| href.starts_with('/'))
-}
-#[cfg(any(feature = "hydrate", test))]
-fn parse_browser_preferences(cookies: Option<&str>) -> (UiPreferences, Locale) {
-    let preferences =
-        parse_preferences(cookies.and_then(|value| find_cookie_value(value, "mcb-ui")));
-    let locale = parse_locale(cookies.and_then(|value| find_cookie_value(value, "mcb-lang")));
-    (preferences, locale)
-}
-
-#[cfg(feature = "hydrate")]
-fn restore_browser_preferences(
-    preferences: RwSignal<UiPreferences>,
-    locale: RwSignal<Locale>,
-    has_restored: RwSignal<bool>,
-) {
-    if has_restored.get_untracked() {
-        return;
-    }
-    let cookies = read_browser_cookies();
-    let (restored_preferences, restored_locale) = parse_browser_preferences(cookies.as_deref());
-    batch(move || {
-        preferences.set(restored_preferences);
-        locale.set(restored_locale);
-        has_restored.set(true);
-    });
-}
-
-#[cfg(feature = "hydrate")]
-fn set_document_attribute(
-    element: &web_sys::Element,
-    name: &str,
-    value: &str,
-    operation: &'static str,
-) {
-    if let Err(source) = element.set_attribute(name, value) {
-        web_sys::console::error_2(&operation.into(), &source);
-    }
-}
-
-#[cfg(feature = "hydrate")]
-fn sync_document_preferences(preferences: UiPreferences) {
-    let Some(document) = web_sys::window().and_then(|window| window.document()) else {
-        return;
-    };
-    if let Some(root) = document.document_element() {
-        set_document_attribute(
-            &root,
-            "data-theme",
-            preferences.theme.as_str(),
-            "Failed to update document theme",
-        );
-        set_document_attribute(
-            &root,
-            "data-ui",
-            &preferences.cookie_value(),
-            "Failed to update document UI state",
-        );
-    }
-    match document.query_selector("meta[name=theme-color]") {
-        Ok(Some(meta)) => set_document_attribute(
-            &meta,
-            "content",
-            preferences.theme.color(),
-            "Failed to update browser theme color",
-        ),
-        Ok(None) => {}
-        Err(source) => web_sys::console::error_2(
-            &"Failed to find browser theme color metadata".into(),
-            &source,
-        ),
-    }
-}
-#[cfg(feature = "hydrate")]
-fn sync_document_locale(locale: Locale) {
-    let root = web_sys::window()
-        .and_then(|window| window.document())
-        .and_then(|document| document.document_element());
-    if let Some(root) = root {
-        set_document_attribute(
-            &root,
-            "lang",
-            locale.as_str(),
-            "Failed to update document language",
-        );
-    }
-}
 
 // Keep the shell's SSR tree and drawer lifecycle under one reactive owner;
 // this component intentionally exceeds the helper-function length limit.
@@ -244,7 +100,7 @@ pub fn SiteShell(children: Children) -> impl IntoView {
                         .flatten()
                         .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
                 };
-                focus_element(replacement);
+                focus_element_for_shell(replacement);
             }
         });
         Effect::new(move || {
@@ -265,16 +121,7 @@ pub fn SiteShell(children: Children) -> impl IntoView {
                             .clamp(0.0, f64::from(u16::MAX)) as u16,
                     );
                 }
-                if let Some(root) = window
-                    .document()
-                    .and_then(|document| document.document_element())
-                {
-                    set_document_attribute(
-                        &root,
-                        "data-hydrated",
-                        "true",
-                        "Failed to mark document as hydrated",
-                    );
+                if mark_document_hydrated() {
                     is_hydrated.set(true);
                 }
             }
@@ -305,7 +152,7 @@ pub fn SiteShell(children: Children) -> impl IntoView {
             on:click=move |event| {
                 #[cfg(feature = "hydrate")]
                 {
-                    if !is_unmodified_click(&event) {
+                    if !super::navigation_behavior::is_unmodified_click(&event) {
                         return;
                     }
                     let is_navigation_link = event.target()
@@ -315,7 +162,7 @@ pub fn SiteShell(children: Children) -> impl IntoView {
                         let main = web_sys::window().and_then(|window| window.document())
                             .and_then(|document| document.get_element_by_id("main"))
                             .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
-                        focus_element(main);
+                        focus_element_for_shell(main);
                     }
                 }
                 #[cfg(not(feature = "hydrate"))]
@@ -362,9 +209,9 @@ pub fn SiteShell(children: Children) -> impl IntoView {
                         let main = web_sys::window().and_then(|window| window.document())
                             .and_then(|document| document.get_element_by_id("main"))
                             .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
-                        focus_element(main);
+                        focus_element_for_shell(main);
                     } else {
-                        focus_element(trigger.get_untracked().map(|element| element.into()));
+                        focus_element_for_shell(trigger.get_untracked().map(|element| element.into()));
                     }
                 }
                 focus_main_after_close.set(false);
@@ -377,7 +224,7 @@ pub fn SiteShell(children: Children) -> impl IntoView {
                         if let Some(dialog) = drawer.get_untracked() { dialog.close(); }
                         return;
                     }
-                    if !is_unmodified_click(&event) {
+                    if !super::navigation_behavior::is_unmodified_click(&event) {
                         return;
                     }
                     let internal_href = event.target()

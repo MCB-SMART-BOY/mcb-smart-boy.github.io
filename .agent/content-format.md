@@ -16,7 +16,7 @@
 ```text
 content/posts/
 ├── _index.md
-└── demo-notes/
+└── notes/
     ├── _index.md
     ├── systems/
     │   ├── _index.md
@@ -96,8 +96,8 @@ weight: 10
 ## 网址与链接
 
 - 内容根 → `/writing/` → `writing/index.html`。
-- `demo-notes/systems/_index.md` → `/writing/demo-notes/systems/` → 相应目录 `index.html`。
-- `demo-notes/systems/small-systems.md` → `/writing/demo-notes/systems/small-systems/` → 相应目录 `index.html`。
+- `notes/systems/_index.md` → `/writing/notes/systems/` → 相应目录 `index.html`。
+- `notes/systems/small-systems.md` → `/writing/notes/systems/small-systems/` → 相应目录 `index.html`。
 - 文章名只去掉最后一个 `.md` 后缀，所有非根页面的公开网址统一以 `/` 结尾；Markdown 来源文件路径本身不追加斜线。
 - 同一位置的 `name.md` 与 `name/_index.md` 会产生网址冲突，构建必须失败。
 - 不支持 `slug`、`permalink`、别名或重定向表。移动或重命名内容就会改变网址。
@@ -108,7 +108,7 @@ weight: 10
 
 HTTP(S) 外链可正常指向 `.md` 文件。原始 HTML 只作为文本显示，危险协议不会成为可执行链接；不要把 Markdown 当作脚本入口。
 
-旧的 `/writing/small-systems`、`/writing/books/demo-notes` 及旧章节路径已退出路由，不保留兼容入口。站点生成的目录、面包屑、父级入口和文章链接自动跟随新位置；作者手写的 Markdown 相对链接仍需在移动文件时同步更新。
+旧的 `/writing/small-systems`、`/writing/books/notes` 及旧章节路径已退出路由，不保留兼容入口。站点生成的目录、面包屑、父级入口和文章链接自动跟随新位置；作者手写的 Markdown 相对链接仍需在移动文件时同步更新。
 
 源码路由只识别规范尾斜线网址；无尾斜线请求在静态托管平台上可能被目录重定向，具体状态码必须以部署后实测为准。未知路径应由托管平台返回根 `404.html` 和 HTTP 404，不把首页当作错误页，也不添加客户端跳转补丁。
 

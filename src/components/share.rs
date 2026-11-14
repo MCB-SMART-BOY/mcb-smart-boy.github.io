@@ -1,14 +1,18 @@
 use leptos::{html, prelude::*};
 
-use super::icons::{Icon, IconKind};
 #[cfg(feature = "hydrate")]
-use crate::clipboard::{ClipboardError, classify_js_error, write_clipboard_text};
+use super::share_model::ManualPanel;
+#[cfg(feature = "hydrate")]
+use super::share_model::{PendingShare, ShareError, ShareOperation, is_current_request, route_key};
+use super::{
+    icons::{Icon, IconKind},
+    share_model::{ManualReason, ShareFeedback, ShareState},
+};
+#[cfg(feature = "hydrate")]
+use crate::clipboard::{ClipboardError, write_clipboard_text};
 use crate::locale::Locale;
-
 #[cfg(feature = "hydrate")]
-use leptos_router::hooks::use_location;
-#[cfg(feature = "hydrate")]
-use leptos_router::location::Location;
+use leptos_router::{hooks::use_location, location::Location};
 #[cfg(feature = "hydrate")]
 use std::sync::{
     Arc,
@@ -16,132 +20,6 @@ use std::sync::{
 };
 #[cfg(feature = "hydrate")]
 use wasm_bindgen::{JsCast, JsValue};
-
-// SSR renders an empty status; these outcomes are only produced by hydrated browser actions.
-#[cfg_attr(not(feature = "hydrate"), allow(dead_code))]
-#[derive(Clone, Copy)]
-enum ShareFeedback {
-    Invoked,
-    Copied,
-    /// The user closed the system sharing sheet without sharing.
-    Cancelled,
-    LinkUnavailable,
-}
-
-// SSR renders no manual panel; its reason is only produced by hydrated browser actions.
-#[cfg_attr(not(feature = "hydrate"), allow(dead_code))]
-#[derive(Clone, Copy)]
-enum ManualReason {
-    ShareFailed,
-    ClipboardFailed,
-}
-
-#[derive(Clone)]
-struct ManualPanel {
-    url: String,
-    reason: ManualReason,
-}
-
-#[derive(Clone, Copy)]
-struct ShareState {
-    is_sharing: RwSignal<bool>,
-    feedback: RwSignal<Option<ShareFeedback>>,
-    panel: RwSignal<Option<ManualPanel>>,
-    #[cfg(feature = "hydrate")]
-    current_url: RwSignal<String>,
-    #[cfg(feature = "hydrate")]
-    current_route: RwSignal<Option<(String, String, String)>>,
-}
-
-impl ShareState {
-    #[cfg(feature = "hydrate")]
-    fn reset_for_url(self, url: String, generation: &AtomicU64) {
-        if self.current_url.get_untracked() == url {
-            return;
-        }
-        self.current_url.set(url);
-        self.invalidate(generation);
-    }
-
-    #[cfg(feature = "hydrate")]
-    fn reset_for_route(self, route: (String, String, String), generation: &AtomicU64) {
-        if self.current_route.get_untracked().as_ref() == Some(&route) {
-            return;
-        }
-        self.current_route.set(Some(route));
-        self.invalidate(generation);
-    }
-
-    #[cfg(feature = "hydrate")]
-    fn invalidate(self, generation: &AtomicU64) {
-        generation.fetch_add(1, Ordering::Relaxed);
-        self.is_sharing.set(false);
-        self.feedback.set(None);
-        self.panel.set(None);
-    }
-}
-
-#[cfg(feature = "hydrate")]
-#[derive(Clone, Copy)]
-enum ShareOperation {
-    WebShare,
-    Clipboard,
-}
-
-#[cfg(feature = "hydrate")]
-enum ShareError {
-    /// The browser window or document cannot be reached.
-    BrowserUnavailable,
-    /// Reading the current URL failed with a JS exception.
-    LinkUnavailable(JsValue),
-    /// Calling system sharing threw or its promise rejected; keeps the JS reason.
-    Invocation(JsValue),
-    /// System sharing returned something other than a promise.
-    InvalidPromise,
-    /// System sharing is present but not callable.
-    InvalidMethod,
-    /// Clipboard writing failed; keeps the structured error and its JS reason.
-    Clipboard(ClipboardError),
-}
-
-#[cfg(feature = "hydrate")]
-impl ShareError {
-    fn is_cancelled(&self) -> bool {
-        matches!(self, Self::Invocation(source) if classify_js_error(source) == "AbortError")
-    }
-
-    fn category(&self) -> &'static str {
-        match self {
-            Self::BrowserUnavailable => "browser unavailable",
-            Self::LinkUnavailable(_) => "location unavailable",
-            Self::Invocation(_) => "web share rejected",
-            Self::InvalidPromise => "web share returned no promise",
-            Self::InvalidMethod => "web share method invalid",
-            Self::Clipboard(error) => error.category(),
-        }
-    }
-
-    fn reason_kind(&self) -> &'static str {
-        match self {
-            Self::LinkUnavailable(source) | Self::Invocation(source) => classify_js_error(source),
-            Self::Clipboard(error) => error.reason_kind(),
-            _ => "none",
-        }
-    }
-
-    fn manual_reason(&self) -> ManualReason {
-        match self {
-            Self::Clipboard(_) => ManualReason::ClipboardFailed,
-            _ => ManualReason::ShareFailed,
-        }
-    }
-}
-
-#[cfg(feature = "hydrate")]
-struct PendingShare {
-    promise: js_sys::Promise,
-    operation: ShareOperation,
-}
 
 #[cfg(feature = "hydrate")]
 fn find_method(object: &JsValue, name: &str) -> Result<Option<js_sys::Function>, ShareError> {
@@ -201,33 +79,6 @@ fn capture_share_target() -> Result<(String, String), ShareError> {
         .map_err(ShareError::LinkUnavailable)?;
     let document = window.document().ok_or(ShareError::BrowserUnavailable)?;
     Ok((url, document.title()))
-}
-
-#[cfg(feature = "hydrate")]
-fn route_key(location: &Location) -> (String, String, String) {
-    (
-        location.pathname.get_untracked(),
-        location.search.get_untracked(),
-        location.hash.get_untracked(),
-    )
-}
-
-#[cfg(feature = "hydrate")]
-fn is_current_request(
-    url: &str,
-    route: &(String, String, String),
-    location: &Location,
-    generation: u64,
-    counter: &AtomicU64,
-    is_alive: &AtomicBool,
-) -> bool {
-    is_alive.load(Ordering::Relaxed)
-        && counter.load(Ordering::Relaxed) == generation
-        && route_key(location) == *route
-        && web_sys::window()
-            .and_then(|window| window.location().href().ok())
-            .as_deref()
-            == Some(url)
 }
 
 #[cfg(feature = "hydrate")]

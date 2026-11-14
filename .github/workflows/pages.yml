@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Full lowercase 40-character commit SHA from MCB-SMART-BOY/mcb-smart-boy.github.io
-        required: true
+        description: Optional full lowercase 40-character commit SHA; defaults to the workflow commit
+        required: false
         type: string
 
 permissions:
@@ -34,7 +34,7 @@ jobs:
           EVENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' && -n "$INPUT_SHA" ]]; then
             sha="$INPUT_SHA"
           else
             sha="$EVENT_SHA"
@@ -65,6 +65,17 @@ jobs:
           printf 'Source commit: %s\n' "$actual_sha" >> "$GITHUB_STEP_SUMMARY"
       - name: Prepare rolling nightly for this checkout
         run: rustup toolchain install nightly --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
+      - name: Cache Rust registries and site build tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-site-tools-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock', 'xtask/src/tools.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-site-tools-
       - name: Install and verify site build tools
         run: cargo xtask setup
       - name: Record actual compiler and build tool versions

@@ -5,7 +5,7 @@
 ## 归属与边界
 
 - 本仓库拥有完整网站源码、文章和 Pages 发布；独立 GitHub 个人主页仓库 `MCB-SMART-BOY/MCB-SMART-BOY` 的简介、视觉与 `profile-*.svg` 不在此同步。个人主页变更须读取该仓库自己的约束，不从本站自动复制教育、经历、社团、荣誉或项目资料。
-- 线上地址为 <https://mcb-smart-boy.github.io/>；Pages source 应设置为 GitHub Actions。本仓库唯一 Pages 发布配置为 [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)，不安装旧的 `.omp/pages/workflow.yml` 副本。变更远端 Pages 设置须单独授权，不覆盖未识别的远端内容。构建时由 Axum/Leptos SSR 生成静态 HTML，线上不运行 Axum。
+- 线上地址为 <https://mcb-smart-boy.github.io/>；Pages source 应设置为 GitHub Actions。本仓库唯一 Pages 发布配置为 [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)，不安装旧的 `.agent/pages/workflow.yml` 副本。变更远端 Pages 设置须单独授权，不覆盖未识别的远端内容。构建时由 Axum/Leptos SSR 生成静态 HTML，线上不运行 Axum。
 - `run/` 与 `.env`、`.env.*` 被 [`.gitignore`](../.gitignore) 忽略；忽略不是权限控制。不要把构建产物、凭据或本地设置写入源码或发布包，也不要手工修改 `run/pages/` 充当发布输入。提交、推送、部署、回滚均需针对实际操作和影响取得授权；尤其推送 `main` 会触发自动发布。
 
 ## 首次准备与日常开发
@@ -60,7 +60,7 @@ Cargo 二进制与 `hash.txt` 位于 `cargo metadata --locked --no-deps --format
 
 ## 发布与恢复边界
 
-workflow 的 `push` 仅匹配 `main`，每次推送都尝试部署该提交；`workflow_dispatch` 必须填写**本网站仓库**已推送的完整、小写 40 位十六进制 `source_sha`，不可填旧个人主页仓库的 SHA。workflow 仅在 `github.repository == 'MCB-SMART-BOY/mcb-smart-boy.github.io'` 执行 build：解析 SHA、以不保存 checkout 凭据的方式检出并校验实际 HEAD，准备 nightly 组件／target、执行 `cargo xtask setup` 和 `cargo xtask check`，然后上传同一 run 的 `run/pages` 并由 deploy job 发布。只有源码仓库现有 GitHub Actions Pages 设置、Pages 环境门禁和检查成功，发布链才可完成；推送未经本地验收的提交仍可能上线。不要以“CI 执行 check”替代本地独立质量门或线上验收。
+workflow 的 `push` 仅匹配 `main`，每次推送都尝试部署该提交；`workflow_dispatch` 可填写**本网站仓库**已推送的完整、小写 40 位十六进制 `source_sha`，留空则使用该次 workflow 的提交 SHA，不可填旧个人主页仓库的 SHA。workflow 仅在 `github.repository == 'MCB-SMART-BOY/mcb-smart-boy.github.io'` 执行 build：解析 SHA、以不保存 checkout 凭据的方式检出并校验实际 HEAD，准备 nightly 组件／target、执行 `cargo xtask setup` 和 `cargo xtask check`，然后上传同一 run 的 `run/pages` 并由 deploy job 发布。只有源码仓库现有 GitHub Actions Pages 设置、Pages 环境门禁和检查成功，发布链才可完成；推送未经本地验收的提交仍可能上线。不要以“CI 执行 check”替代本地独立质量门或线上验收。
 
 工作流默认只授予 `contents: read`，仅 deploy job 获得 `pages: write` 和 `id-token: write`；各发布 Action 固定完整提交，`upload-pages-artifact` 使用固定 v4.0.0 提交，其内部 upload-artifact 也固定 v4.6.2 提交。checkout `persist-credentials: false`，未配置 PAT；发布使用 workflow 的 `GITHUB_TOKEN` 和 Pages 环境策略。并发组为 `github-pages`，`cancel-in-progress: false`：进行中的部署不因新推送取消；等待中的运行可能被更新推送替换，不能把每个 push 都误记为单独成功发布。
 
@@ -68,7 +68,7 @@ workflow 的 `push` 仅匹配 `main`，每次推送都尝试部署该提交；`w
 
 授权发布后要在 Pages 平台实际核对 HTTPS、深链刷新、无尾斜线请求、真实 HTTP 404、WASM MIME、资源完整性，记录**来源仓库、源码 SHA、workflow run**；本地纯静态服务或 SSR 成功均不能代替线上验证。发布失败停止后续发布并保留诊断，不虚构回滚基线。恢复前确认旧 run 经验证的 artifact 是否仍可取得；过期则按记录的**原来源仓库与 SHA**重建、验收后再另行授权发布。迁移前个人主页仓库的 SHA 不能传给当前同仓工作流；当前没有跨仓兼容回滚路径，既有线上回滚未演练，不能承诺立即恢复。涉及旧 workflow 重跑或远端设置变更须先确认仓库、输入、权限和实际影响。
 
-项目本地验收先做 [行为矩阵](verification.md)，随后 `cargo xtask check`；本地还须独立执行 `"$HOME/.omp/agent/validate.sh"` 的适用质量门。分别记录结果，不把未运行、缺工具或跳过写成通过，也不要把仅针对网站 `Cargo.lock` 的审计扩展到共享安装工具。
+项目本地验收先做 [行为矩阵](verification.md)，随后 `cargo xtask check`；若当前 Agent 环境提供独立验证器，按 [验证指南](verification.md) 通过环境适配器执行。分别记录结果，不把未运行、缺工具或跳过写成通过，也不要把仅针对网站 `Cargo.lock` 的审计扩展到共享安装工具。
 
 ## 历史来源与未消除风险
 

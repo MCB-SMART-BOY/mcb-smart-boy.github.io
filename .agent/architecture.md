@@ -57,9 +57,9 @@ GitHub 个人主页由独立的 `MCB-SMART-BOY/MCB-SMART-BOY` 仓库维护，不
 
 - 首页为 `/`，阅读根为 `/writing/`；其他内容 URL 取决于目录／文件的真实位置，均以 `/`
   结束，绝不依赖独立 slug、permalink、别名或重定向表。例如
-  `content/posts/demo-notes/systems/small-systems.md` 对应
-  `/writing/demo-notes/systems/small-systems/`，导出为
-  `writing/demo-notes/systems/small-systems/index.html`。
+  `content/posts/notes/systems/small-systems.md` 对应
+  `/writing/notes/systems/small-systems/`，导出为
+  `writing/notes/systems/small-systems/index.html`。
 - `src/reading.rs::resolve_reading_route` 只接受 `/writing/` 及索引内路径；
   无尾斜线等非规范应用路径和已经删除的旧 `/writing/books/...`、旧章节 URL
   不会在应用内解析为现有文章。托管平台可能先对目录请求作重定向；
